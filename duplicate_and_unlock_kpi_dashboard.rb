@@ -11,7 +11,7 @@ def clone_kpi_dashboard_in_same_workspace(obj, opts)
 
   case obj['category']
   when "analyticalDashboard"
-    all_objects = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "filterContext,kpi", 1 , false )
+    all_objects = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "filterContext,kpi,visualizationWidget", 1 , false )
 
     mapping = all_objects.map do |report|
       clone_kpi_dashboard_in_same_workspace(report, opts)
@@ -35,28 +35,11 @@ def clone_kpi_dashboard_in_same_workspace(obj, opts)
     pp res['uri']
 
 
-  when "kpi"
+  when "kpi", "visualizationWidget", "filterContext"
 
-    obj['full_json']['kpi']['meta'].delete('uri')
-    obj['full_json']['kpi']['meta'].delete('locked')
-    obj['full_json']['kpi']['meta'].delete('identifier')
-    obj['full_json']['kpi']['meta']['title'] = obj['title']
-
-
-
-    res = client.post "/gdc/md/#{project_id}/obj" , obj['full_json']
-
-    return {'original_uri'=> obj['uri'] , 'cloned_uri'=> res['uri']}
-
-
-  when "filterContext"
-
-
-    # Delete Links, not needed
-    # Delete URI (obj_id) so a new one is created
-    obj['full_json']['filterContext']['meta'].delete('uri')
-    obj['full_json']['filterContext']['meta'].delete('locked')
-    obj['full_json']['filterContext']['meta'].delete('identifier')
+    obj['full_json'][obj['category']]['meta'].delete('uri')
+    obj['full_json'][obj['category']]['meta'].delete('locked')
+    obj['full_json'][obj['category']]['meta'].delete('identifier')
 
     res = client.post "/gdc/md/#{project_id}/obj" , obj['full_json']
 
