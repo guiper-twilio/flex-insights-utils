@@ -2,7 +2,7 @@ require 'gooddata'
 require 'prettyprint'
 require 'optparse'
 require "json"
-require_relative('../lib/core/adata')
+require_relative('lib/core/metadata')
 
 #
 #
