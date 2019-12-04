@@ -1,0 +1,15 @@
+{
+  "source_workspace": "k4wauvc30rsj26tw4phjct3zyi6lif5c",
+  "target_workspaces":
+  [
+    "um1pcv4g18f76igr5cgojw150uic2zm0"
+  ],
+  "reports_to_copy": [
+    129917,
+    125816,
+    126102
+  ],
+  "dashboards_to_copy": [
+    125820
+  ]
+}
