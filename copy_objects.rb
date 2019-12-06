@@ -234,16 +234,24 @@ data['target_workspaces'].each do |target_workspace|
   project_target = client.projects(target_workspace)
 
   data['dashboards_to_copy'].each do |dashboard|
-    object = get_single_object_with_uri( "/gdc/md/#{data['source_workspace']}/obj/#{dashboard}", client)
-    puts "Working on the dashboard #{dashboard}"
-    get_objects_from_object_v2( object, { client: client, project: project_source, project_target: project_target})
-    puts ""
+    obj = get_single_object_with_uri( "/gdc/md/#{data['source_workspace']}/obj/#{dashboard}", client)
+    if obj['category'] == 'projectDashboard'
+      puts "Working on the dashboard #{dashboard}"
+      get_objects_from_object_v2( obj, { client: client, project: project_source, project_target: project_target})
+      puts ""
+    else
+      raise "Provided obj_id (#{obj_id}) is not a dashboard. Oject is a #{obj['category']}."
+    end
   end
 
   data['reports_to_copy'].each do |report|
-    object = get_single_object_with_uri( "/gdc/md/#{data['source_workspace']}/obj/#{report}", client)
-    puts "Working on the report #{report}"
-    get_objects_from_object_v2( object, { client: client, project: project_source, project_target: project_target})
-    puts ""
+    obj = get_single_object_with_uri( "/gdc/md/#{data['source_workspace']}/obj/#{report}", client)
+    if obj['category'] == 'report'
+      puts "Working on the report #{report}"
+      get_objects_from_object_v2( obj, { client: client, project: project_source, project_target: project_target})
+      puts ""
+    else
+      raise "Provided obj_id (#{obj_id}) is not a report. Oject is a #{obj['category']}."
+    end
   end
 end
