@@ -36,7 +36,7 @@ require_relative('lib/core/metadata')
 #   - Twilio ensures that across any Flex Insights workspace, in the out of box solution, two objects with the same external identifier have the same definition
 # There are APIs for translating back and forth between internal and external identifiers
 
-def get_elements_from_object(obj_string, all_objects, client)
+def get_elements_from_object(main_obj, obj_string, all_objects, client)
 
   all_elements = get_uris(obj_string, false).select { |element| element =~ /element/ }
 
@@ -53,12 +53,18 @@ def get_elements_from_object(obj_string, all_objects, client)
     end
 
     title = find_element_value(element, element_link,  client)
-    element_to_map <<  { 'category'=> "element", 'uri'=> element, 'attribute'=> obj['identifier'], 'value'=> title}
+    if title == "ERROR_NOT_FOUND_GDC_FLEX"
+      abort "#{main_obj['category']} #{main_obj['uri']} with name \"#{main_obj['title']}\" contains some element values which doesn't exist in data.\nUnable to continue until fixed. Element missing #{element}"
+    else
+      element_to_pmap <<  { 'category'=> "element", 'uri'=> element, 'attribute'=> obj['identifier'], 'value'=> title}
+    end
   end
   return element_to_map
 end
 
 def get_objects_from_object_v2( obj, opts)
+
+  puts "Working on obj #{obj}"
 
   case obj['category']
   when "projectDashboard"
@@ -99,7 +105,7 @@ def get_objects_from_object_v2( obj, opts)
     # Get All the dependencies
     all_objects = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "metric,fact,attribute,attributeDisplayForm", 1 , false )
     # Unfortunately we still need to filter out the elements
-    all_objects.concat( get_elements_from_object(obj['content'].to_s, all_objects,  opts[:client] ))
+    all_objects.concat( get_elements_from_object(obj, obj['content'].to_s, all_objects, opts[:client] ))
 
     # Get the metrics on the nearest edge. This must be recursive, since we have to recreate the metrics per order
     direct_metrics  = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "metric", 1 , true)
@@ -120,7 +126,7 @@ def get_objects_from_object_v2( obj, opts)
 
     all_objects = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "metric,fact,reportDefinition,attribute,attributeDisplayForm", 0 , false )
 
-    all_objects.concat( get_elements_from_object(obj['content']['expression'], all_objects,  opts[:client] ))
+    all_objects.concat( get_elements_from_object(obj, obj['content']['expression'], all_objects,  opts[:client] ))
 
     direct_metrics  = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "metric", 1 , true)
 
@@ -246,7 +252,7 @@ data['target_workspaces'].each do |target_workspace|
 
   data['reports_to_copy'].each do |report|
     obj = get_single_object_with_uri( "/gdc/md/#{data['source_workspace']}/obj/#{report}", client)
-    if obj['category'] == 'report'
+    if obj  ['category'] == 'report'
       puts "Working on the report #{report}"
       get_objects_from_object_v2( obj, { client: client, project: project_source, project_target: project_target})
       puts ""

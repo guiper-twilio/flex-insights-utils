@@ -32,7 +32,7 @@ def find_element_value(element, element_link, client)
   result = client.get(element_link + "/?id=#{element_id}")
   items = result['attributeElements']['elements']
   if items.empty?
-    fail(AttributeElementNotFound, element_id)
+    return "ERROR_NOT_FOUND_GDC_FLEX"
   else
     items.first['title']
   end
