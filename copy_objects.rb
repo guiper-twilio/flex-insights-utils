@@ -56,15 +56,13 @@ def get_elements_from_object(main_obj, obj_string, all_objects, client)
     if title == "ERROR_NOT_FOUND_GDC_FLEX"
       abort "#{main_obj['category']} #{main_obj['uri']} with name \"#{main_obj['title']}\" contains some element values which doesn't exist in data.\nUnable to continue until fixed. Element missing #{element}"
     else
-      element_to_pmap <<  { 'category'=> "element", 'uri'=> element, 'attribute'=> obj['identifier'], 'value'=> title}
+      element_to_map <<  { 'category'=> "element", 'uri'=> element, 'attribute'=> obj['identifier'], 'value'=> title}
     end
   end
   return element_to_map
 end
 
 def get_objects_from_object_v2( obj, opts)
-
-  puts "Working on obj #{obj}"
 
   case obj['category']
   when "projectDashboard"
@@ -160,8 +158,13 @@ def copy_obj_to_target_workspace(single_obj, all_objects,
   all_elements = all_objects.select{ |o| o['category'] == 'element'}
   all_elements.map do |element|
     attribute = opts[:target_project].attributes(element['attribute']).primary_label
+    begin
     element_mapping << {'source_element'=> element['uri'], 'target_element'=> attribute.find_value_uri(element['value'])}
+    rescue GoodData::AttributeElementNotFound
+      abort "Error when creating #{single_obj['category']} with uri #{single_obj['uri']} with name \"#{single_obj['title']}\". Element value \"#{element['value']}\" on attribute #{element['attribute']} doesn't exist in workspace #{opts[:target_project].uri}"
+    end
   end
+
 
   target_json_string = single_obj['full_json'].to_s
   uris = get_uris( target_json_string )
