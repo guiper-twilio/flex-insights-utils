@@ -67,6 +67,7 @@ def get_objects_from_object_v2( obj, opts)
   case obj['category']
   when "projectDashboard"
     all_objects = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "metric,report,reportDefinition,fact,attribute,attributeDisplayForm", 1 , false )
+    all_objects.concat( get_elements_from_object(obj, obj['content'].to_s, all_objects, opts[:client] ))
 
     all_report = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project], "report", 1 , true )
 
