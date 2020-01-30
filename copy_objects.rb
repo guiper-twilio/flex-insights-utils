@@ -42,7 +42,7 @@ def get_elements_from_object(main_obj, obj_string, all_objects, client)
 
   # Refactor code -> Move Out
   element_to_map = []
-  all_elements.map do |element|
+  all_elements.pmap do |element|
     attribute = element.scan(%r{([^\[\]]*)\/elements\?id=(\d+)})[0][0]
     obj = all_objects.find { |obj| obj['uri'] == attribute }
 
@@ -62,7 +62,7 @@ def get_elements_from_object(main_obj, obj_string, all_objects, client)
   return element_to_map
 end
 
-def get_objects_from_object_v2( obj, opts)
+def get_objects_from_object_v2( obj, opts, objs_created)
 
   case obj['category']
   when "projectDashboard"
@@ -71,8 +71,10 @@ def get_objects_from_object_v2( obj, opts)
 
     all_report = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project], "report", 1 , true )
 
-    all_report.pmap do |report|
-      get_objects_from_object_v2( report, opts)
+    all_report.map do |report|
+      unless objs_created.any?{ |created| created['uri'] == report['uri']}
+        objs_created << get_objects_from_object_v2( report, opts, objs_created)
+      end
     end
 
     obj['full_json']['projectDashboard']['meta'].delete('uri')
@@ -81,12 +83,15 @@ def get_objects_from_object_v2( obj, opts)
     final_obj = copy_obj_to_target_workspace(obj, all_objects, {client: opts[:client], target_project: opts[:project_target],  })
 
 
+
+
   when "report"
 
     all_report_definitions = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project], "reportDefinition", 1 , true )
     report_definition = all_report_definitions.sort_by { |obj| -obj['obj_id'].to_i }[0]
 
-    get_objects_from_object_v2( report_definition, opts)
+
+    objs_created << get_objects_from_object_v2( report_definition, opts, objs_created)
 
     #Remove any other report definition and setup the new one
     obj['full_json']['report']['meta'].delete('uri')
@@ -109,8 +114,10 @@ def get_objects_from_object_v2( obj, opts)
     # Get the metrics on the nearest edge. This must be recursive, since we have to recreate the metrics per order
     direct_metrics  = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "metric", 1 , true)
 
-    direct_metrics.pmap do |metric|
-      get_objects_from_object_v2( metric, opts)
+    direct_metrics.map do |metric|
+      unless objs_created.any?{ |created| created['uri'] == metric['uri']}
+        objs_created << get_objects_from_object_v2( metric, opts, objs_created)
+      end
     end
 
     # Delete Links, not needed
@@ -118,6 +125,7 @@ def get_objects_from_object_v2( obj, opts)
     # Delete URI (obj_id) so a new one is created
     obj['full_json']['reportDefinition']['meta'].delete('uri')
     obj['full_json']['reportDefinition']['meta'].delete('locked')
+
     final_obj = copy_obj_to_target_workspace(obj, all_objects, {client: opts[:client], target_project: opts[:project_target],  })
 
 
@@ -129,8 +137,10 @@ def get_objects_from_object_v2( obj, opts)
 
     direct_metrics  = get_object_dependencies(obj['obj_id'], opts[:client], opts[:project],  "metric", 1 , true)
 
-    dependent_metrics = direct_metrics.pmap do |metric|
-      get_objects_from_object_v2( metric, opts)
+    dependent_metrics = direct_metrics.map do |metric|
+      unless objs_created.any?{ |created| created['uri'] == metric['uri']}
+        objs_created << get_objects_from_object_v2( metric, opts, objs_created)
+      end
     end
 
     # Minor tweaks on the content. Needs a though
@@ -140,6 +150,8 @@ def get_objects_from_object_v2( obj, opts)
     obj['full_json'][obj['category']]['meta'].delete('locked')
 
     final_obj = copy_obj_to_target_workspace(obj, all_objects, {client: opts[:client], target_project: opts[:project_target],  })
+
+
   end
 
   return obj
@@ -150,14 +162,14 @@ def copy_obj_to_target_workspace(single_obj, all_objects,
   # Everything is mapped via identifier! It's critical to ensure it is the same
   results = []
 
-  underlying_uris = all_objects.select{ |o| o['category'] != 'element'}.map { |o| o['identifier'] }
+  underlying_uris = all_objects.select{ |o| o['category'] != 'element'}.pmap { |o| o['identifier'] }
 
   mapping = map_identifiers_to_uri(underlying_uris, opts[:client], opts[:target_project])
   element_mapping = []
 
   #Element Mapping is special.
   all_elements = all_objects.select{ |o| o['category'] == 'element'}
-  all_elements.map do |element|
+  all_elements.pmap do |element|
     attribute = opts[:target_project].attributes(element['attribute']).primary_label
     begin
     element_mapping << {'source_element'=> element['uri'], 'target_element'=> attribute.find_value_uri(element['value'])}
@@ -191,6 +203,8 @@ def copy_obj_to_target_workspace(single_obj, all_objects,
   uri = save_object_ensuring_identifier( target_json, single_obj['identifier'],  opts[:client], opts[:target_project] )
 
   puts "#{single_obj['category']} with identifier #{single_obj['identifier']} and title #{single_obj['title']} been created/replaced with final uri: #{uri}"
+
+
 
 end
 
@@ -243,11 +257,12 @@ project_source = client.projects( data['source_workspace'] )
 data['target_workspaces'].each do |target_workspace|
   project_target = client.projects(target_workspace)
 
+  objs_created = []
   data['dashboards_to_copy'].each do |dashboard|
     obj = get_single_object_with_uri( "/gdc/md/#{data['source_workspace']}/obj/#{dashboard}", client)
     if obj['category'] == 'projectDashboard'
       puts "Working on the dashboard #{dashboard}"
-      get_objects_from_object_v2( obj, { client: client, project: project_source, project_target: project_target})
+      objs_created << get_objects_from_object_v2( obj, { client: client, project: project_source, project_target: project_target}, objs_created)
       puts ""
     else
       raise "Provided obj_id (#{obj_id}) is not a dashboard. Oject is a #{obj['category']}."
@@ -258,7 +273,7 @@ data['target_workspaces'].each do |target_workspace|
     obj = get_single_object_with_uri( "/gdc/md/#{data['source_workspace']}/obj/#{report}", client)
     if obj  ['category'] == 'report'
       puts "Working on the report #{report}"
-      get_objects_from_object_v2( obj, { client: client, project: project_source, project_target: project_target})
+      objs_created << get_objects_from_object_v2( obj, { client: client, project: project_source, project_target: project_target}, objs_created)
       puts ""
     else
       raise "Provided obj_id (#{obj_id}) is not a report. Oject is a #{obj['category']}."
