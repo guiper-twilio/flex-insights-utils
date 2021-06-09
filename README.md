@@ -5,7 +5,7 @@ First iteration as a set of basic ruby scripts, which passed a basic usage test.
 
 If anything is not working open an issue with details, or feel free to create a PR. 
 
-Looking for an owner with more than me. 
+Looking for an owner with more time than me. 
 
 # Installation 
 Steps to be double checked
@@ -49,13 +49,5 @@ config-file.json:
 ### Current Limitations:
 - Only reports and dashboards currently supported. Can be easily expanded to support metrics or KPI Dashboards
 - Metrics and Report folders are not preserved - On target Workspaces copied objects have no folders associated. Can be easily fixed later is adoption / usage justifies it. 
-- Element values must exist in all the target workspaces. For example, if we have a report/metric filtering a specific Queue (queue_xyz), this queue value must exist in all the target workspaces, otherwise the script fails. This cannot be fixed in the future
+- Element values MUST exist in all the target workspaces. For example, if we have a report/metric filtering a specific Queue (queue_xyz), this queue value must exist in all the target workspaces, otherwise the script fails as the end metric cannot be created or would be different if we skip this filter. This cannot be fixed in the future
 
-## Clone and Unlock KPI Dashboard
-By default GoodData doesn't support a way to clone KPI Dashboards. 
-This script allows the duplication within a single workspace, so all the stuff within the default Queue KPI's can be leveraged (for example, change a metric on a single KPI, or the default filter).
-
-### Usage
-```bundle exec ruby duplicate_and_unlock_kpi_dashboard.rb --username gpereira@twilio.com -p password --workspace w9wwwltvaq63ipwy5etdzlb2nda59jtl --kpi ab7ZNFV8eyr1```
-
-A new KPI dashboard with the title ```Original Name Ruby Duplicate``` will be available in the workspace. This KPI can be fully modified.
