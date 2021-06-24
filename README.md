@@ -25,7 +25,7 @@ Use cases:
 
 ### Usage
 Prepare a JSON config file:
-config-file.json:
+`config-file.json`:
 ```
 {
   "source_workspace": "k4wauvc30rsj26tw4phjct3zyi6lif5c",
@@ -44,7 +44,7 @@ config-file.json:
 }
 ```
 
-```bundle exec ruby copy_objects.rb --username gpereira@twilio.com -p password --config_file config_file.json```
+```bundle exec ruby copy_objects.rb --username gpereira@twilio.com -p password --config_file config-file.json```
 
 ### Current Limitations:
 - Only reports and dashboards currently supported. Can be easily expanded to support metrics or KPI Dashboards
